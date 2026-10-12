@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client"
+    output   = "./generated/prisma"
+
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id            // Clerk user ID
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  member      CoupleMember?
+  reflections Reflection[]
+  prayers     PrayerRequest[]
+  amens       PrayerAmen[]
+  @@map("users")
+}
+
+model Couple {
+  id              String   @id @default(cuid())
+  inviteCode      String?  @unique
+  inviteExpiresAt DateTime?
+  status          CoupleStatus @default(PENDING)
+  timezone        String   @default("UTC")
+  createdAt       DateTime @default(now())
+  members         CoupleMember[]
+  sessions        DevotionalSession[]
+  prayers         PrayerRequest[]
+  @@map("couples")
+}
+
+model CoupleMember {
+  coupleId String
+  userId   String @unique
+  joinedAt DateTime @default(now())
+  couple   Couple @relation(fields: [coupleId], references: [id])
+  user     User   @relation(fields: [userId], references: [id])
+  @@id([coupleId, userId])
+  @@map("couple_members")
+}
+
+model Devotional {
+  id                 String @id @default(cuid())
+  dayIndex           Int    @unique
+  title              String
+  scriptureRef       String
+  scriptureText      String
+  body               String
+  prayerPrompt       String
+  discussionQuestion String
+  sessions           DevotionalSession[]
+  @@map("devotionals")
+}
+
+model DevotionalSession {
+  id           String @id @default(cuid())
+  coupleId     String
+  devotionalId String
+  localDate    String
+  couple       Couple     @relation(fields: [coupleId], references: [id])
+  devotional   Devotional @relation(fields: [devotionalId], references: [id])
+  reflections  Reflection[]
+  progress     SessionProgress[]
+  @@unique([coupleId, localDate])
+  @@map("devotional_sessions")
+}
+
+model Reflection {
+  id          String @id @default(cuid())
+  sessionId   String
+  userId      String
+  body        String
+  submittedAt DateTime @default(now())
+  session     DevotionalSession @relation(fields: [sessionId], references: [id])
+  user        User @relation(fields: [userId], references: [id])
+  @@unique([sessionId, userId])
+  @@map("reflections")
+}
+
+model SessionProgress {
+  sessionId   String
+  userId      String
+  completedAt DateTime @default(now())
+  session     DevotionalSession @relation(fields: [sessionId], references: [id])
+  @@id([sessionId, userId])
+  @@map("session_progress")
+}
+
+model PrayerRequest {
+  id         String @id @default(cuid())
+  coupleId   String
+  authorId   String
+  title      String
+  body       String?
+  status     PrayerStatus @default(ACTIVE)
+  answeredAt DateTime?
+  answerNote String?
+  createdAt  DateTime @default(now())
+  couple     Couple @relation(fields: [coupleId], references: [id])
+  author     User   @relation(fields: [authorId], references: [id])
+  amens      PrayerAmen[]
+  @@index([coupleId])
+  @@map("prayer_requests")
+}
+
+model PrayerAmen {
+  prayerRequestId String
+  userId          String
+  createdAt       DateTime @default(now())
+  prayer          PrayerRequest @relation(fields: [prayerRequestId], references: [id])
+  user            User @relation(fields: [userId], references: [id])
+  @@id([prayerRequestId, userId])
+  @@map("prayer_amens")
+}
+
+enum CoupleStatus {
+  PENDING
+  ACTIVE
+}
+
+enum PrayerStatus {
+  ACTIVE
+  ANSWERED
+  ARCHIVED
+}
