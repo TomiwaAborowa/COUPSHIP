@@ -36,6 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </SignUpButton>
               </Show>
               <Show when="signed-in">
+                <Link href="/today" className="text-sm font-medium hover:underline">
+                  Today
+                </Link>
+                <Link href="/prayers" className="mr-2 text-sm font-medium hover:underline">
+                  Prayers
+                </Link>
                 <UserButton />
                 <SignOutButton>
                   <button className={`${buttonClass} border hover:bg-zinc-100`}>

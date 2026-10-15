@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { requirePairedUser } from "@/lib/couple";
+import { redirect } from "next/navigation";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -11,13 +11,6 @@ export default async function Home() {
     );
   }
 
-  // Signed-in users without an active couple are sent to /pair.
-  const { user, partner } = await requirePairedUser();
-  return (
-    <div className="p-8">
-      <p>
-        Signed in as {user.name}, paired with {partner?.name ?? "your partner"}.
-      </p>
-    </div>
-  );
+  // /today sends users without an active couple on to /pair.
+  redirect("/today");
 }
