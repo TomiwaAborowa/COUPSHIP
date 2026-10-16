@@ -1,4 +1,5 @@
 // src/app/today/page.tsx
+import type { Metadata } from "next";
 import { requirePairedUser } from "@/lib/couple";
 import { getReflectionsForViewer, getTodaySession } from "@/lib/devotional";
 import {
@@ -11,6 +12,8 @@ import {
 import { PartnerProgressListener } from "./partner-progress-listener";
 import { ReflectionForm } from "./reflection-form";
 
+export const metadata: Metadata = { title: "Today" };
+
 export default async function TodayPage() {
   const { user, couple, partner } = await requirePairedUser();
   const session = await getTodaySession(couple);
@@ -20,7 +23,7 @@ export default async function TodayPage() {
   const partnerName = partner?.name ?? "your partner";
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
+    <main className="mx-auto max-w-2xl space-y-6 p-4 sm:p-8">
       {partner && !partnerHasReflected && (
         <PartnerProgressListener sessionId={session.id} partnerId={partner.id} />
       )}

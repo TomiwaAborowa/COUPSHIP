@@ -1,11 +1,9 @@
-// src/middleware.ts
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+// src/proxy.ts
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect();
-});
+// Only makes the Clerk session available. Access control lives with the data:
+// every page and server action checks via getCurrentUser() / requirePairedUser().
+export default clerkMiddleware();
 
 export const config = {
   matcher: ["/((?!_next|.*\\..*).*)", "/(api|trpc)(.*)"],

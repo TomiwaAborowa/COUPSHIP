@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "../../../prisma/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth";
+import { deleteCouple } from "@/lib/couple";
 import { db } from "@/lib/db";
 import { CODE_LENGTH } from "./constants";
 
@@ -105,12 +106,7 @@ export async function joinWithCode(_prev: PairState, formData: FormData): Promis
     if (claimed.count === 0) return "That code was just used. Ask your partner for a new one.";
 
     // Drop the joiner's own unused invite, if they had made one.
-    if (mine) {
-      await tx.coupleMember.delete({
-        where: { coupleId_userId: { coupleId: mine.coupleId, userId: user.id } },
-      });
-      await tx.couple.delete({ where: { id: mine.coupleId } });
-    }
+    if (mine) await deleteCouple(tx, mine.coupleId);
 
     await tx.coupleMember.create({ data: { coupleId: couple.id, userId: user.id } });
     return null;

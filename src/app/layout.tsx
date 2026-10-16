@@ -7,8 +7,14 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
+import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+
+export const metadata: Metadata = {
+  title: { default: "Coupship", template: "%s · Coupship" },
+  description: "A daily devotional and shared prayer list for couples.",
+};
 
 const buttonClass =
   "rounded-md px-4 py-2 text-sm font-medium transition-colors cursor-pointer";
@@ -18,11 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <body className="min-h-screen bg-white text-zinc-900">
-          <header className="flex items-center justify-between border-b px-8 py-4">
+          <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3 sm:px-8 sm:py-4">
             <Link href="/" className="text-lg font-semibold">
               Coupship
             </Link>
-            <nav className="flex items-center gap-3">
+            <nav className="flex flex-wrap items-center gap-3">
               <Show when="signed-out">
                 <SignInButton>
                   <button className={`${buttonClass} border hover:bg-zinc-100`}>
@@ -39,12 +45,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/today" className="text-sm font-medium hover:underline">
                   Today
                 </Link>
-                <Link href="/prayers" className="mr-2 text-sm font-medium hover:underline">
+                <Link href="/prayers" className="text-sm font-medium hover:underline">
                   Prayers
                 </Link>
+                <Link href="/couple" className="text-sm font-medium hover:underline">
+                  Couple
+                </Link>
                 <UserButton />
+                {/* The UserButton menu has sign-out too; the extra button is hidden on phones. */}
                 <SignOutButton>
-                  <button className={`${buttonClass} border hover:bg-zinc-100`}>
+                  <button className={`${buttonClass} hidden border hover:bg-zinc-100 sm:inline-flex`}>
                     Sign out
                   </button>
                 </SignOutButton>

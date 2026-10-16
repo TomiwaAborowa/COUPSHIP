@@ -1,4 +1,5 @@
 // src/app/prayers/page.tsx
+import type { Metadata } from "next";
 import { requirePairedUser } from "@/lib/couple";
 import { getCouplePrayers, type CouplePrayer } from "@/lib/prayer";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import {
 import { archivePrayer, toggleAmen } from "./actions";
 import { PrayerListListener } from "./prayer-list-listener";
 import { MarkAnsweredForm, NewPrayerForm } from "./prayer-forms";
+
+export const metadata: Metadata = { title: "Prayer list" };
 
 export default async function PrayersPage() {
   const { user, couple, partner } = await requirePairedUser();
@@ -78,7 +81,7 @@ export default async function PrayersPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-8 p-8">
+    <main className="mx-auto max-w-2xl space-y-8 p-4 sm:p-8">
       <PrayerListListener coupleId={couple.id} userId={user.id} />
       <h1 className="text-3xl font-semibold">Prayer list</h1>
 

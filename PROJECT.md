@@ -12,14 +12,18 @@ Prisma 7.
 
 ## Prisma 7 rules (don't "fix" these back to Prisma 5/6 habits)
 
-- Connection URL lives in `prisma.config.ts` (`defineConfig` + `env()` from `prisma/config`),
-  NOT in `schema.prisma`. The datasource block has only `provider = "postgresql"`.
+- The CLI's connection URL lives in `prisma.config.ts` (`datasource.url`), NOT in
+  `schema.prisma`. The datasource block has only `provider = "postgresql"`.
 - Generator is `prisma-client`, output `prisma/generated/prisma`. Import the client from
   `prisma/generated/prisma/client`, never `@prisma/client`.
 - A driver adapter is mandatory: `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`.
   Use the shared `db` from `src/lib/db.ts`.
-- One `url` only (no `directUrl`). `DATABASE_URL` is Supabase's **session pooler, port 5432**,
-  username `postgres.<project-ref>`. Port 6543 (transaction pooler) breaks migrations.
+- Two URLs, both Supabase poolers with username `postgres.<project-ref>`:
+  - `DATABASE_URL`: **transaction pooler, port 6543**. Used by the app at runtime (`src/lib/db.ts`).
+  - `DIRECT_URL`: **session pooler, port 5432**. Used by the Prisma CLI (migrations, seed).
+    Port 6543 breaks migrations. The direct `db.<ref>.supabase.co` host is IPv6-only; don't use it.
+- `prisma.config.ts` reads `process.env.DIRECT_URL`, NOT `env("DIRECT_URL")`: `env()` throws when
+  the variable is unset, which breaks `prisma generate` in `postinstall` on Vercel builds.
 - Seed command is in `prisma.config.ts` (`migrations.seed`), run with `npx prisma db seed`.
 - Never edit a migration that's already applied; add a new one
   (`npx prisma migrate dev --create-only --name <x>` for hand-written SQL).
@@ -34,6 +38,21 @@ Prisma 7.
   through server actions + Prisma. Helpers: `current_user_id()`, `my_couple_id()`,
   `has_reflected(session_id)`, `session_in_my_couple(session_id)`.
 - `prisma/rls.sql` is a stale duplicate of the init migration. Ignore it or delete it.
+- Realtime: `session_progress`, `prayer_requests` and `prayer_amens` are in the
+  `supabase_realtime` publication. Clients subscribe to INSERT/UPDATE only, never DELETE
+  (Realtime can't apply RLS to deletes, so they'd leak other couples' row IDs).
+
+## Testing
+
+- `npm test` starts a fresh local Postgres (`prisma dev`, ports 51213–51215), adds stand-ins for
+  Supabase's `anon`/`authenticated` roles and `auth.jwt()`, applies all migrations, then runs
+  Vitest (`test/`). Always use `npm test`; a reused `prisma dev` server can be left broken.
+- `test/setup.ts` refuses any non-localhost `DATABASE_URL`, mocks Clerk (`signInAs()` in
+  `test/helpers.ts`), `redirect` (throws `RedirectError`) and `revalidatePath`, and resets tables
+  before each test.
+- `prisma dev` (PGlite) handles one connection at a time, so tests use a single-connection
+  client, and it crashes on UPDATE/DELETE under RLS, so `test/rls.test.ts` checks write-blocking
+  via INSERT plus the policy catalog.
 
 ## Key code
 
@@ -41,6 +60,12 @@ Prisma 7.
 - `src/lib/couple.ts`: `getMembership`, `requirePairedUser()` (redirects to `/sign-in` or
   `/pair`; returns `{ user, couple, partner }`), `getActiveInvite`.
 - `src/app/pair/*`: invite create/join server actions (race-safe claim via `updateMany`).
+- `src/app/couple/*`: couple info + `unpair` (typed confirmation). Unpairing deletes the couple
+  and ALL its data via `deleteCouple(tx, id)` in `src/lib/couple.ts` (FKs are ON DELETE RESTRICT,
+  so it deletes children first). History is never kept: a new partner must not see the old one's.
+- `src/proxy.ts` is plain `clerkMiddleware()` (no route matching). Every page and server action
+  checks access itself via `getCurrentUser()` / `requirePairedUser()`; keep it that way.
+- Pending couples need no cleanup job: one per user, reused by `createInvite`, deleted on join.
 - Couple has `timezone` (IANA, captured when the invite is created).
 - `DevotionalSession` is unique on `(coupleId, localDate)`; `localDate` is `YYYY-MM-DD`
   in the couple's timezone. `Reflection` is unique on `(sessionId, userId)`.
@@ -54,11 +79,11 @@ Prisma 7.
 | 2 | Schema, RLS, seed | Done |
 | 3 | Clerk auth | Done |
 | 4 | Couple pairing (invite codes) | Done |
-| **5** | **Daily devotional + delayed-reveal reflections** | **Built; two-account browser check pending** |
+| 5 | Daily devotional + delayed-reveal reflections | Done |
 | 6 | Realtime "partner has reflected" (supabase-js, `session_progress`) | Done |
 | 7 | Shared prayer list + Amens (`/prayers`) | Done (incl. Realtime) |
-| 8 | Joint goals (optional) | Not started |
-| 9 | Hardening, tests, polish | Not started |
+| 8 | Joint goals (optional) | Skipped for MVP |
+| 9 | Hardening, tests, polish | Done |
 
 ## Phase 5 plan
 

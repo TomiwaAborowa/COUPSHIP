@@ -1,6 +1,7 @@
 // src/lib/couple.ts
 import "server-only";
 import { redirect } from "next/navigation";
+import type { Prisma } from "../../prisma/generated/prisma/client";
 import { getCurrentUser } from "./auth";
 import { db } from "./db";
 
@@ -29,4 +30,16 @@ export function getActiveInvite(couple: { inviteCode: string | null; inviteExpir
   const msLeft = couple.inviteExpiresAt.getTime() - Date.now();
   if (msLeft <= 0) return null;
   return { code: couple.inviteCode, hoursLeft: Math.ceil(msLeft / 3_600_000) };
+}
+
+// Deletes a couple and everything it owns. Foreign keys are ON DELETE RESTRICT,
+// so children go first. Pass the transaction client so callers stay atomic.
+export async function deleteCouple(tx: Prisma.TransactionClient, coupleId: string) {
+  await tx.prayerAmen.deleteMany({ where: { prayer: { coupleId } } });
+  await tx.prayerRequest.deleteMany({ where: { coupleId } });
+  await tx.sessionProgress.deleteMany({ where: { session: { coupleId } } });
+  await tx.reflection.deleteMany({ where: { session: { coupleId } } });
+  await tx.devotionalSession.deleteMany({ where: { coupleId } });
+  await tx.coupleMember.deleteMany({ where: { coupleId } });
+  await tx.couple.delete({ where: { id: coupleId } });
 }

@@ -1,4 +1,5 @@
 // src/app/pair/page.tsx
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveInvite, getMembership } from "@/lib/couple";
@@ -11,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { CopyButton, CreateInviteForm, JoinForm } from "./pair-forms";
 
+export const metadata: Metadata = { title: "Pair with your partner" };
+
 export default async function PairPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
@@ -21,7 +24,7 @@ export default async function PairPage() {
   const invite = getActiveInvite(membership?.couple);
 
   return (
-    <main className="mx-auto max-w-md space-y-6 p-8">
+    <main className="mx-auto max-w-md space-y-6 p-4 sm:p-8">
       <h1 className="text-2xl font-semibold">Pair with your partner</h1>
 
       <Card>
